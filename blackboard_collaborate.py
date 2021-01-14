@@ -1,5 +1,10 @@
 #! /usr/bin/python3.8
 
+# Blackboard Collaborate Ultra Launcher
+# https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher
+# SPDX-License-Identifier: MPL-2.0+
+# SPDX-FileCopyrightText: 2021 gucci-on-fleek
+
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import atexit
 from base64 import b64encode
@@ -102,9 +107,7 @@ class BlackboardBrowser(WebBrowser):
 
         self.driver.switch_to.frame(self.element_by_id("collabUltraLtiFrame"))
         self.click(self.element_by_text(launch_button))
-        sleep(
-            1
-        )  # I can't find any event to trigger the next click, so we'll need to sleep
+        sleep(1)
 
         self.click(self.element_by_text("Join Course Room"))
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
@@ -128,10 +131,11 @@ class BlackboardBrowser(WebBrowser):
 if __name__ == "__main__":
     title = " Blackboard Collaborate Ultra Launcher "
     parser = ArgumentParser(
-        description=f"╔{'═'*len(title)}╗\n"
+        description=f"╔{'═' * len(title)}╗\n"
         f"║{title}║\n"
-        f"╚{'═'*len(title)}╝\n"
+        f"╚{'═' * len(title)}╝\n"
         "A simple script to automatically launch a Blackboard Collaborate Ultra session.",
+        epilog="See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for more.",
         formatter_class=RawDescriptionHelpFormatter,
     )
     parser.add_argument(
