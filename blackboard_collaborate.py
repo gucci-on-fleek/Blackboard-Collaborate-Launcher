@@ -5,21 +5,29 @@
 # SPDX-License-Identifier: MPL-2.0+
 # SPDX-FileCopyrightText: 2021 gucci-on-fleek
 
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import atexit
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from base64 import b64encode
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import sleep
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
+
+PrefsType = Dict[str, Union[bool, int]]
 
 
 class WebBrowser:
     """Controls a Firefox web browser."""
 
-    def __init__(self, extra_prefs: Dict[str, Union[bool, int]] = {}):
+    def __init__(
+        self, extra_prefs: PrefsType = {}, firefox_profile_path: Optional[Path] = None
+    ):
         self.options = webdriver.firefox.options.Options()
+        if firefox_profile_path:
+            self.options.profile = firefox_profile_path
 
         self.prefs = {
             "media.navigator.streams.fake": True,  # Use a fake webcam and microphone to avoid permission issues
@@ -83,10 +91,13 @@ class BlackboardBrowser(WebBrowser):
     """Accesses the Blackboard Website"""
 
     def __init__(
-        self, base_url: str, extra_prefs: Dict[str, Union[bool, int]] = {}
+        self,
+        base_url: str,
+        extra_prefs: PrefsType = {},
+        firefox_profile_path: Optional[Path] = None,
     ) -> None:
         self.base_url = base_url
-        super().__init__(extra_prefs)
+        super().__init__(extra_prefs, firefox_profile_path)
 
     def sign_in(self, username: str, password: str) -> None:
         """Sign in to the Blackboard webapp."""
@@ -112,7 +123,7 @@ class BlackboardBrowser(WebBrowser):
         self.click(self.element_by_text("Join Course Room"))
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
 
-    def configure_collaborate(self, profile_picture_path: str = "") -> None:
+    def configure_collaborate(self) -> None:
         """Configure the Blackboard Collaborate Ultra."""
         self.element_by_id("site-loading")
         # Skip the "Check your Microphone" screen
@@ -120,12 +131,6 @@ class BlackboardBrowser(WebBrowser):
         self.set_localstorage("techcheck.status", "complete")
         # Skip the tutorial
         self.set_localstorage("ftue.announcement.introduction", True)
-
-        if profile_picture_path:
-            with open(profile_picture_path, "rb") as file:
-                encoded = b64encode(file.read()).decode("ascii")
-                value = f'"data:image/{profile_picture_path[-3:]};base64,{encoded}"'
-                self.set_localstorage("profile.avatar", value)
 
 
 if __name__ == "__main__":
@@ -152,30 +157,65 @@ if __name__ == "__main__":
     parser.add_argument("username", help="Your Blackboard username.")
     parser.add_argument("password", help="Your Blackboard password.")
     parser.add_argument(
-        "--profile-picture-path",
-        help="The path to your profile picture. Should be a 400×400 png/jpg.",
-    )
-    parser.add_argument(
         "--raspberry-pi",
         help="Enable Raspberry Pi about:config settings for hardware acceleration of videos.",
         action="store_true",
     )
+    parser.add_argument(
+        "--hide-ui",
+        help="Hide the UI of the browser so that only Blackboard Collaborate is visible.",
+        action="store_true",
+    )
     args = parser.parse_args()
 
-    if args.raspberry_pi:
-        extra_prefs: Dict[str, Union[bool, int]] = {
-            "layers.acceleration.force-enabled": True,
-            "media.ffmpeg.vaapi.enabled": True,
-            "media.mediasource.webm.enabled": False,
-            "media.webm.enabled": False,
-            "webgl.force-enabled": True,
-        }
-    else:
-        extra_prefs = {}
+    extra_prefs: PrefsType = {}
 
-    with BlackboardBrowser(args.base_url, extra_prefs) as browser:
+    if args.raspberry_pi:
+        extra_prefs.update(
+            {
+                # Enable hardware acceleration
+                "layers.acceleration.force-enabled": True,
+                "media.ffmpeg.vaapi.enabled": True,
+                "webgl.force-enabled": True,
+                # The Raspberry Pi can only hardware decode h.264, so disable webm
+                "media.mediasource.webm.enabled": False,
+                "media.webm.enabled": False,
+            }
+        )
+
+    if args.hide_ui:
+        extra_prefs.update(
+            {
+                "toolkit.legacyUserProfileCustomizations.stylesheets": True,  # Enable userChrome.css
+            }
+        )
+
+        tempdir = TemporaryDirectory()
+        atexit.register(tempdir.cleanup)
+        firefox_profile_path = Path(tempdir.name)
+
+        (firefox_profile_path / "chrome").mkdir()
+        with open(firefox_profile_path / "chrome/userChrome.css", "wt") as user_chrome:
+            user_chrome.write(
+                """
+                #nav-bar, #tabbrowser-tabs { /* Hide the URL bar and the tab bar */
+                    height: 0px !important;
+                    min-height: 0px !important;
+                    overflow: hidden !important;
+                }
+                #navigator-toolbox { /* Match the titlebar with the BB Collab background */
+                    background: #262626 !important;
+                }
+                """
+            )
+
+    with BlackboardBrowser(
+        args.base_url,
+        extra_prefs,
+        firefox_profile_path if firefox_profile_path else None,
+    ) as browser:
         browser.sign_in(args.username, args.password)
         browser.launch_collaborate(args.course_id, args.launch_button)
-        browser.configure_collaborate(args.profile_picture_path)
+        browser.configure_collaborate()
         browser.wait_until_window_close()
     exit()
