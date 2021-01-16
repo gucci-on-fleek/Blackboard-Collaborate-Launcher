@@ -142,30 +142,53 @@ if __name__ == "__main__":
         "A simple script to automatically launch a Blackboard Collaborate Ultra session.",
         epilog="See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for more.",
         formatter_class=RawDescriptionHelpFormatter,
+        fromfile_prefix_chars="@",
+        add_help=False,  # We need to manually add the help so that it appears in the correct group
     )
-    parser.add_argument(
-        "base_url", help="The base Blackboard URL. (Example: 'blackboard.example.edu')"
+    required = parser.add_argument_group(title="Required Arguments")
+
+    required.add_argument(
+        "--base-url",
+        "-b",
+        metavar="URL",
+        help="The base Blackboard URL. (Example: 'blackboard.example.edu')",
+        required=True,
     )
-    parser.add_argument(
+    required.add_argument(
         "course_id",
         help="The Course's ID. Found in the query string when you open the URL in Blackboard. (Example: '_12345_6')",
     )
-    parser.add_argument(
+    required.add_argument(
         "launch_button",
         help="The text found in the button used to open the class. (Example: 'Math 101 - Course Room')",
     )
-    parser.add_argument("username", help="Your Blackboard username.")
-    parser.add_argument("password", help="Your Blackboard password.")
-    parser.add_argument(
+    required.add_argument(
+        "--username", "-u", help="Your Blackboard username.", required=True
+    )
+    required.add_argument(
+        "--password", "-p", help="Your Blackboard password.", required=True
+    )
+
+    optional = parser.add_argument_group(title="Optional Flags")
+    optional.add_argument("--help", "-h", action="help", help="Show this message.")
+    optional.add_argument(
         "--raspberry-pi",
         help="Enable Raspberry Pi about:config settings for hardware acceleration of videos.",
         action="store_true",
     )
-    parser.add_argument(
+    optional.add_argument(
         "--hide-ui",
         help="Hide the UI of the browser so that only Blackboard Collaborate is visible.",
         action="store_true",
     )
+
+    # We need to document the `@file` syntax, and the best way to do so that keeps the left indent and line wrapping of the other options is to add a dummy argument.
+    parser.add_argument_group(title="Configuration File").add_argument(
+        "@file",
+        nargs="*",
+        help="Instead of typing the arguments on the command line, you may instead use a configuration file. In the file, you may specify any amount of newline-separated arguments or flags. Include the file with the syntax '@filename' at any point on the command line.",
+    )
+
     args = parser.parse_args()
 
     extra_prefs: PrefsType = {}
@@ -212,7 +235,7 @@ if __name__ == "__main__":
     with BlackboardBrowser(
         args.base_url,
         extra_prefs,
-        firefox_profile_path if firefox_profile_path else None,
+        firefox_profile_path if args.hide_ui else None,
     ) as browser:
         browser.sign_in(args.username, args.password)
         browser.launch_collaborate(args.course_id, args.launch_button)
