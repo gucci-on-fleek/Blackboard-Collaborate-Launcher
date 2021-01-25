@@ -26,33 +26,53 @@ You will require [`python3`](https://www.python.org/downloads/) (≥ 3.8), [Fi
 
 Usage
 -----
+### Script
+```text
+usage: blackboard_collaborate.py [-h] [-c CONFIG] class_name
 
-```
-usage: blackboard_collaborate.py [-h] [--raspberry-pi] [--hide-ui]
-                                 base_url course_id launch_button username
-                                 password
-
-╔═══════════════════════════════════════╗
-║ Blackboard Collaborate Ultra Launcher ║
-╚═══════════════════════════════════════╝
 A simple script to automatically launch a Blackboard Collaborate Ultra session.
 
 positional arguments:
-  base_url        The base Blackboard URL. (Example:
-                  'blackboard.example.edu')
-  course_id       The Course's ID. Found in the query string when you open
-                  the URL in Blackboard. (Example: '_12345_6')
-  launch_button   The text found in the button used to open the class.
-                  (Example: 'Math 101 - Course Room')
-  username        Your Blackboard username.
-  password        Your Blackboard password.
+  class_name            The name of the class to launch, as specified in the config file.
 
 optional arguments:
-  -h, --help      show this help message and exit
-  --raspberry-pi  Enable Raspberry Pi about:config settings for hardware
-                  acceleration of videos.
-  --hide-ui       Hide the UI of the browser so that only Blackboard
-                  Collaborate is visible.
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        The configuration file to use. Defaults to './blackboard_collaborate.ini'.
 
-See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for more.
+See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for full documentation.
+```
+
+### Config File
+```ini
+[General]                               # Place global settings in the [General] Section
+
+base_url      = https://bb.example.edu  # The base Blackboard URL. (Required) 
+                                        # You must include 'https://' or 'http://'
+
+username      = john.smith              # Your Blackboard Username. (Required)
+
+password      = SuperSecretPassword     # Your Blackboard Password. (Required)
+
+hide_ui       = False                   # Hide the UI of the browser so that only 
+                                        # Blackboard Collaborate is visible. (Optional)
+
+raspberry_pi  = False                   # Enable hardware acceleration of videos on
+                                        # the Raspberry Pi. (Optional)
+
+[ClassOne]                              # The class name. You can have as many classes 
+                                        # as you want; just give each it's own [section]. 
+
+course_id     = _12345_6                # The Course's ID. Found in the query string
+                                        # when you open the URL in Blackboard. (Required)
+                                        
+launch_button = Math 101 - Course Room  # The text found in the button used to
+                                        # open the class. (Required)
+
+[Biology]                               # Launch this with
+                                        # `blackboard_collaborate.py Biology`.
+
+cOuRsE_iD     = _98765_4                # All keys are case-insensitive.
+launch_button = Biology 300 - Lecture
+hide_ui       = True                    # You can override any setting from [General].
 ```
