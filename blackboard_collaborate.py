@@ -65,9 +65,13 @@ class WebBrowser:
         """Get an element on a webpage by its `id`."""
         return self.driver.find_element_by_id(id)
 
-    def element_by_text(self, text: str, tag="*"):
+    def element_by_text(self, text: str, tag: str = "*", exact: bool = True):
         """Select an element on a webpage by its text contents."""
-        return self.driver.find_element_by_xpath(f'//{tag}[text()="{text}"]')
+        if exact:
+            xpath = f'//{tag}[text()="{text}"]'
+        else:
+            xpath = f'//{tag}[contains(text(), "{text}")]'
+        return self.driver.find_element_by_xpath(xpath)
 
     def click(self, element):
         """
@@ -129,7 +133,7 @@ class BlackboardBrowser(WebBrowser):
         self.click(self.element_by_text(launch_button))
         sleep(1)
 
-        self.click(self.element_by_text("Join Course Room"))
+        self.click(self.element_by_text("Join", exact=False))
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
 
     def configure_collaborate(self) -> None:
@@ -198,14 +202,17 @@ class BlackboardBrowser(WebBrowser):
                     }
                     #navigator-toolbox { /* Match the titlebar with the BB Collab background */
                         background: #262626 !important;
+                        border-bottom: 0px !important;
                     }
                     """
                 )
+        else:
+            firefox_profile_path = None
 
         with cls(
             base_url,
             extra_prefs,
-            firefox_profile_path if hide_ui else None,
+            firefox_profile_path,
             driver_path,
         ) as browser:
             browser.sign_in(username, password)
