@@ -20,9 +20,9 @@ Installation
 You will require [`python3`](https://www.python.org/downloads/) (≥ 3.8), [Firefox](https://www.mozilla.org/en-US/firefox/download/thanks/), and [`geckodriver`](https://github.com/mozilla/geckodriver/releases/latest). This script has been tested on Windows and Linux, but it should work on macOS as well.
 
 1. Install Firefox and `python3`.
-2. Place `geckodriver` somewhere in your `PATH`.
+2. Place `geckodriver` somewhere in your `PATH`, or add its location to the config file.
 3. Run: `pip3 install -r requirements.txt`
-4. That's it!
+4. That’s it!
 
 Usage
 -----
@@ -38,7 +38,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
-                        The configuration file to use. Defaults to './blackboard_collaborate.ini'.
+                        The configuration file to use. Defaults to “./blackboard_collaborate.ini”.
 
 See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for full documentation.
 ```
@@ -48,7 +48,7 @@ See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for full d
 [General]                               # Place global settings in the [General] Section
 
 base_url      = https://bb.example.edu  # The base Blackboard URL. (Required) 
-                                        # You must include 'https://' or 'http://'
+                                        # You must include “https://” or “http://”
 
 username      = john.smith              # Your Blackboard Username. (Required)
 
@@ -60,17 +60,19 @@ hide_ui       = False                   # Hide the UI of the browser so that onl
 raspberry_pi  = False                   # Enable hardware acceleration of videos on
                                         # the Raspberry Pi. (Optional)
 
-[ClassOne]                              # The class name. You can have as many classes 
-                                        # as you want; just give each it's own [section]. 
+driver_path   = C:\geckodriver.exe      # The path to geckodriver. (Optional)
 
-course_id     = _12345_6                # The Course's ID. Found in the query string
+[ClassOne]                              # The class name. You can have as many classes 
+                                        # as you want; just give each its own [section]. 
+
+course_id     = _12345_6                # The Course’s ID. Found in the query string
                                         # when you open the URL in Blackboard. (Required)
                                         
 launch_button = Math 101 - Course Room  # The text found in the button used to
                                         # open the class. (Required)
 
 [Biology]                               # Launch this with
-                                        # `blackboard_collaborate.py Biology`.
+                                        # “blackboard_collaborate.py Biology”.
 
 cOuRsE_iD     = _98765_4                # All keys are case-insensitive.
 launch_button = Biology 300 - Lecture

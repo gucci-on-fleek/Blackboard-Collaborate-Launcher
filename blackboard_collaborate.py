@@ -23,7 +23,10 @@ class WebBrowser:
     """Controls a Firefox web browser."""
 
     def __init__(
-        self, extra_prefs: PrefsType = {}, firefox_profile_path: Optional[Path] = None
+        self,
+        extra_prefs: PrefsType = {},
+        firefox_profile_path: Optional[Path] = None,
+        driver_path: str = None,
     ):
         self.options = webdriver.firefox.options.Options()
         if firefox_profile_path:
@@ -39,9 +42,11 @@ class WebBrowser:
         for key, value in {**self.prefs, **extra_prefs}.items():
             self.options.set_preference(key, value)
 
-        self.driver = webdriver.Firefox(options=self.options)
-        # Search for each element for at least 20 seconds before giving up
-        self.driver.implicitly_wait(20)
+        self.driver = webdriver.Firefox(
+            options=self.options, executable_path=driver_path
+        )
+        # Search for each element for at least 30 seconds before giving up
+        self.driver.implicitly_wait(30)
         self.driver.maximize_window()
         atexit.register(self.__exit__)
 
@@ -98,9 +103,10 @@ class BlackboardBrowser(WebBrowser):
         base_url: str,
         extra_prefs: PrefsType = {},
         firefox_profile_path: Optional[Path] = None,
+        driver_path: str = None,
     ) -> None:
         self.base_url = base_url
-        super().__init__(extra_prefs, firefox_profile_path)
+        super().__init__(extra_prefs, firefox_profile_path, driver_path)
 
     def sign_in(self, username: str, password: str) -> None:
         """Sign in to the Blackboard Website."""
@@ -150,6 +156,7 @@ class BlackboardBrowser(WebBrowser):
         raspberry_pi=False,
         course_id,
         launch_button,
+        driver_path,
     ):
         """Run all of the steps necessary to log in to Blackboard Collaborate Ultra."""
         extra_prefs: PrefsType = {}
@@ -199,6 +206,7 @@ class BlackboardBrowser(WebBrowser):
             base_url,
             extra_prefs,
             firefox_profile_path if hide_ui else None,
+            driver_path,
         ) as browser:
             browser.sign_in(username, password)
             browser.launch_collaborate(course_id, launch_button)
@@ -232,7 +240,7 @@ if __name__ == "__main__":
         "-c",
         "--config",
         type=FileType("rt"),
-        help="The configuration file to use. Defaults to './blackboard_collaborate.ini'.",
+        help="The configuration file to use. Defaults to “./blackboard_collaborate.ini”.",
         default=Path("./blackboard_collaborate.ini"),
     )
 
@@ -241,15 +249,20 @@ if __name__ == "__main__":
     conf = ConfigParser(
         default_section="General",
         interpolation=BooleanCoercingInterpolation(),
-        defaults={"raspberry_pi": "False", "hide_ui": "False"},
+        defaults={
+            "raspberry_pi": "False",
+            "hide_ui": "False",
+            "driver_path": "geckodriver",
+        },
     )
     conf.read_file(arguments.config)
 
     try:
         BlackboardBrowser.run_all(**conf[arguments.class_name])
-    except TypeError as e:
+    except TypeError:
         print(
-            f"You appear to be missing the following REQUIRED configuration keys:{e.args[0].split(':')[1]}. Please edit {arguments.config.name} and try again."
+            f"You appear to be missing some REQUIRED configuration keys. Please edit {arguments.config.name} and try again. \n"
         )
+        raise
 
     exit()
