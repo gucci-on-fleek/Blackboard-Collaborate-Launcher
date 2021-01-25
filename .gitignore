@@ -2,3 +2,5 @@
 .vscode/
 geckodriver.log
 profile.jpg
+test-*
+__pycache__/

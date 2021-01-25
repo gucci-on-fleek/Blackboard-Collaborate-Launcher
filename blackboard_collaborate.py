@@ -6,12 +6,12 @@
 # SPDX-FileCopyrightText: 2021 gucci-on-fleek
 
 import atexit
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from base64 import b64encode
+from argparse import ArgumentParser, FileType
+from configparser import ConfigParser, Interpolation
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
@@ -40,18 +40,19 @@ class WebBrowser:
             self.options.set_preference(key, value)
 
         self.driver = webdriver.Firefox(options=self.options)
-        self.driver.implicitly_wait(20)  # Try finding each element for 20 seconds
+        # Search for each element for at least 20 seconds before giving up
+        self.driver.implicitly_wait(20)
         self.driver.maximize_window()
         atexit.register(self.__exit__)
 
-    def __enter__(self):  # For a context manager (`with` statement)
+    def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.driver.__exit__()
         atexit.unregister(self.__exit__)
 
-    def get_url(self, url: str) -> None:
+    def navigate_to_url(self, url: str) -> None:
         """Navigate the browser to a url."""
         self.driver.get(url)
 
@@ -67,9 +68,11 @@ class WebBrowser:
         """
         Simulate a click on an element.
 
-        We are using this instead of `element.click()` because this works even if the element is obscured or blocked
+        We are using this instead of `element.click()` because this works even if the element is obscured or blocked.
         """
-        self.driver.execute_script("arguments[0].click();", element)
+        self.driver.execute_script(
+            "arguments[0].click();", element
+        )  # Use JavaScript to click the element instead of a simulated mouse
 
     def set_localstorage(self, key, value):
         """Set a value in the browser's `localstorage`."""
@@ -88,7 +91,7 @@ class WebBrowser:
 
 
 class BlackboardBrowser(WebBrowser):
-    """Accesses the Blackboard Website"""
+    """Accesses the Blackboard (Classic) Website."""
 
     def __init__(
         self,
@@ -100,19 +103,19 @@ class BlackboardBrowser(WebBrowser):
         super().__init__(extra_prefs, firefox_profile_path)
 
     def sign_in(self, username: str, password: str) -> None:
-        """Sign in to the Blackboard webapp."""
-        self.get_url(self.base_url)
+        """Sign in to the Blackboard Website."""
+        self.navigate_to_url(self.base_url)
 
         self.element_by_id("user_id").send_keys(username)
         self.element_by_id("password").send_keys(password)
         self.click(self.element_by_id("entry-login"))
 
-        # Wait until the homepage loads after login
+        # Wait until the homepage loads after login (the logout button can only appear after we have successfully logged in)
         self.element_by_id("topframe.logout.label")
 
     def launch_collaborate(self, course_id: str, launch_button: str) -> None:
         """Launch Blackboard Collaborate Ultra."""
-        self.get_url(
+        self.navigate_to_url(
             f"{self.base_url}/webapps/collab-ultra/tool/collabultra?course_id={course_id}"
         )
 
@@ -124,7 +127,11 @@ class BlackboardBrowser(WebBrowser):
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
 
     def configure_collaborate(self) -> None:
-        """Configure the Blackboard Collaborate Ultra."""
+        """
+        Configure Blackboard Collaborate Ultra.
+
+        This skips the tutorial and microphone check screens.
+        """
         self.element_by_id("site-loading")
         # Skip the "Check your Microphone" screen
         self.set_localstorage("techcheck.initial-techcheck", "complete")
@@ -132,113 +139,117 @@ class BlackboardBrowser(WebBrowser):
         # Skip the tutorial
         self.set_localstorage("ftue.announcement.introduction", True)
 
+    @classmethod
+    def run_all(
+        cls,
+        *,
+        base_url,
+        username,
+        password,
+        hide_ui=False,
+        raspberry_pi=False,
+        course_id,
+        launch_button,
+    ):
+        """Run all of the steps necessary to log in to Blackboard Collaborate Ultra."""
+        extra_prefs: PrefsType = {}
 
-if __name__ == "__main__":
-    title = " Blackboard Collaborate Ultra Launcher "
-    parser = ArgumentParser(
-        description=f"╔{'═' * len(title)}╗\n"
-        f"║{title}║\n"
-        f"╚{'═' * len(title)}╝\n"
-        "A simple script to automatically launch a Blackboard Collaborate Ultra session.",
-        epilog="See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for more.",
-        formatter_class=RawDescriptionHelpFormatter,
-        fromfile_prefix_chars="@",
-        add_help=False,  # We need to manually add the help so that it appears in the correct group
-    )
-    required = parser.add_argument_group(title="Required Arguments")
-
-    required.add_argument(
-        "--base-url",
-        "-b",
-        metavar="URL",
-        help="The base Blackboard URL. (Example: 'blackboard.example.edu')",
-        required=True,
-    )
-    required.add_argument(
-        "course_id",
-        help="The Course's ID. Found in the query string when you open the URL in Blackboard. (Example: '_12345_6')",
-    )
-    required.add_argument(
-        "launch_button",
-        help="The text found in the button used to open the class. (Example: 'Math 101 - Course Room')",
-    )
-    required.add_argument(
-        "--username", "-u", help="Your Blackboard username.", required=True
-    )
-    required.add_argument(
-        "--password", "-p", help="Your Blackboard password.", required=True
-    )
-
-    optional = parser.add_argument_group(title="Optional Flags")
-    optional.add_argument("--help", "-h", action="help", help="Show this message.")
-    optional.add_argument(
-        "--raspberry-pi",
-        help="Enable Raspberry Pi about:config settings for hardware acceleration of videos.",
-        action="store_true",
-    )
-    optional.add_argument(
-        "--hide-ui",
-        help="Hide the UI of the browser so that only Blackboard Collaborate is visible.",
-        action="store_true",
-    )
-
-    # We need to document the `@file` syntax, and the best way to do so that keeps the left indent and line wrapping of the other options is to add a dummy argument.
-    parser.add_argument_group(title="Configuration File").add_argument(
-        "@file",
-        nargs="*",
-        help="Instead of typing the arguments on the command line, you may instead use a configuration file. In the file, you may specify any amount of newline-separated arguments or flags. Include the file with the syntax '@filename' at any point on the command line.",
-    )
-
-    args = parser.parse_args()
-
-    extra_prefs: PrefsType = {}
-
-    if args.raspberry_pi:
-        extra_prefs.update(
-            {
-                # Enable hardware acceleration
-                "layers.acceleration.force-enabled": True,
-                "media.ffmpeg.vaapi.enabled": True,
-                "webgl.force-enabled": True,
-                # The Raspberry Pi can only hardware decode h.264, so disable webm
-                "media.mediasource.webm.enabled": False,
-                "media.webm.enabled": False,
-            }
-        )
-
-    if args.hide_ui:
-        extra_prefs.update(
-            {
-                "toolkit.legacyUserProfileCustomizations.stylesheets": True,  # Enable userChrome.css
-            }
-        )
-
-        tempdir = TemporaryDirectory()
-        atexit.register(tempdir.cleanup)
-        firefox_profile_path = Path(tempdir.name)
-
-        (firefox_profile_path / "chrome").mkdir()
-        with open(firefox_profile_path / "chrome/userChrome.css", "wt") as user_chrome:
-            user_chrome.write(
-                """
-                #nav-bar, #tabbrowser-tabs { /* Hide the URL bar and the tab bar */
-                    height: 0px !important;
-                    min-height: 0px !important;
-                    overflow: hidden !important;
+        if raspberry_pi:
+            extra_prefs.update(
+                {
+                    # Enable hardware acceleration
+                    "layers.acceleration.force-enabled": True,
+                    "media.ffmpeg.vaapi.enabled": True,
+                    "webgl.force-enabled": True,
+                    # The Raspberry Pi can only hardware decode h.264, so disable webm
+                    "media.mediasource.webm.enabled": False,
+                    "media.webm.enabled": False,
                 }
-                #navigator-toolbox { /* Match the titlebar with the BB Collab background */
-                    background: #262626 !important;
-                }
-                """
             )
 
-    with BlackboardBrowser(
-        args.base_url,
-        extra_prefs,
-        firefox_profile_path if args.hide_ui else None,
-    ) as browser:
-        browser.sign_in(args.username, args.password)
-        browser.launch_collaborate(args.course_id, args.launch_button)
-        browser.configure_collaborate()
-        browser.wait_until_window_close()
+        if hide_ui:
+            extra_prefs.update(
+                {
+                    "toolkit.legacyUserProfileCustomizations.stylesheets": True,  # Enable userChrome.css
+                }
+            )
+
+            tempdir = TemporaryDirectory()
+            atexit.register(tempdir.cleanup)
+            firefox_profile_path = Path(tempdir.name)
+
+            (firefox_profile_path / "chrome").mkdir()
+            with open(
+                firefox_profile_path / "chrome/userChrome.css", "wt"
+            ) as user_chrome:
+                user_chrome.write(
+                    """
+                    #nav-bar, #tabbrowser-tabs { /* Hide the URL bar and the tab bar */
+                        height: 0px !important;
+                        min-height: 0px !important;
+                        overflow: hidden !important;
+                    }
+                    #navigator-toolbox { /* Match the titlebar with the BB Collab background */
+                        background: #262626 !important;
+                    }
+                    """
+                )
+
+        with cls(
+            base_url,
+            extra_prefs,
+            firefox_profile_path if hide_ui else None,
+        ) as browser:
+            browser.sign_in(username, password)
+            browser.launch_collaborate(course_id, launch_button)
+            browser.configure_collaborate()
+            browser.wait_until_window_close()
+
+
+class BooleanCoercingInterpolation(Interpolation):
+    """Convert any 'stringified' boolean values into 'true' booleans."""
+
+    BOOLEANS = {"true": True, "false": False}
+
+    def before_get(self, parser, section, option, value, defaults):
+        try:
+            return self.BOOLEANS[value.lower()]
+        except KeyError:
+            return value
+
+
+if __name__ == "__main__":
+    argparser = ArgumentParser(
+        description=f"A simple script to automatically launch a Blackboard Collaborate Ultra session.",
+        epilog="See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for full documentation.",
+    )
+
+    argparser.add_argument(
+        "class_name",
+        help="The name of the class to launch, as specified in the config file.",
+    )
+    argparser.add_argument(
+        "-c",
+        "--config",
+        type=FileType("rt"),
+        help="The configuration file to use. Defaults to './blackboard_collaborate.ini'.",
+        default=Path("./blackboard_collaborate.ini"),
+    )
+
+    arguments = argparser.parse_args()
+
+    conf = ConfigParser(
+        default_section="General",
+        interpolation=BooleanCoercingInterpolation(),
+        defaults={"raspberry_pi": "False", "hide_ui": "False"},
+    )
+    conf.read_file(arguments.config)
+
+    try:
+        BlackboardBrowser.run_all(**conf[arguments.class_name])
+    except TypeError as e:
+        print(
+            f"You appear to be missing the following REQUIRED configuration keys:{e.args[0].split(':')[1]}. Please edit {arguments.config.name} and try again."
+        )
+
     exit()
