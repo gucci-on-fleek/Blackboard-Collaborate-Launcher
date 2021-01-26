@@ -61,6 +61,8 @@ class WebBrowser:
         self.driver.maximize_window()
         atexit.register(self.__exit__)
 
+        self.localstorage = self._LocalStorage(self)
+
     def __enter__(self):
         return self
 
@@ -104,11 +106,20 @@ class WebBrowser:
             "arguments[0].click();", element
         )  # Use JavaScript to click the element instead of a simulated mouse
 
-    def set_localstorage(self, key: Hashable, value: Hashable) -> None:
-        """Set a value in the browser's `localstorage`."""
-        self.driver.execute_script(
-            "window.localStorage.setItem(arguments[0], arguments[1]);", key, value
-        )
+    class _LocalStorage:
+        """A class to allow `localstorage` to be accessed as a Mapping"""
+
+        def __init__(self, outer: "WebBrowser") -> None:
+            self.outer = outer
+
+        def __setitem__(self, key: Hashable, value: Hashable) -> None:
+            """Set a value in the browser's `localstorage`."""
+            self.outer.driver.execute_script(
+                "window.localStorage.setItem(arguments[0], arguments[1]);", key, value
+            )
+
+        def __getitem__(self, key: Hashable) -> None:
+            NotImplemented
 
     def wait_until_window_close(self) -> None:
         """Blocks until the browser window closes."""
@@ -116,7 +127,7 @@ class WebBrowser:
             while True:
                 sleep(5)
                 self.driver.get_window_position()
-        except WebDriverException:
+        except (WebDriverException, KeyboardInterrupt):
             return
 
 
@@ -169,10 +180,10 @@ class BlackboardBrowser(WebBrowser):
         """
         self.element_by_id("site-loading")
         # Skip the "Check your Microphone" screen
-        self.set_localstorage("techcheck.initial-techcheck", "complete")
-        self.set_localstorage("techcheck.status", "complete")
+        self.localstorage["techcheck.initial-techcheck"] = "complete"
+        self.localstorage["techcheck.status"] = "complete"
         # Skip the tutorial
-        self.set_localstorage("ftue.announcement.introduction", True)
+        self.localstorage["ftue.announcement.introduction"] = True
 
     @classmethod
     def run_all(
