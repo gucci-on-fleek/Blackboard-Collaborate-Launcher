@@ -11,10 +11,11 @@ from configparser import ConfigParser, Interpolation
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, Union, Hashable
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.firefox.webelement import FirefoxWebElement
 
 PrefsType = Dict[str, Union[bool, int]]
 
@@ -26,8 +27,18 @@ class WebBrowser:
         self,
         extra_prefs: PrefsType = {},
         firefox_profile_path: Optional[Path] = None,
-        driver_path: str = None,
-    ):
+        driver_path: str = "geckodriver",
+    ) -> None:
+        """Initializes and launches Firefox.
+
+        Args:
+            extra_prefs (PrefsType, optional): Any additional settings to be set in
+              "about:config". Defaults to {}.
+            firefox_profile_path (Path, optional): A path to a Firefox profile
+              directory. Defaults to None.
+            driver_path (str, optional): The path to the `geckodriver` binary.
+              Defaults to "geckodriver".
+        """
         self.options = webdriver.firefox.options.Options()
         if firefox_profile_path:
             self.options.profile = firefox_profile_path
@@ -61,21 +72,31 @@ class WebBrowser:
         """Navigate the browser to a url."""
         self.driver.get(url)
 
-    def element_by_id(self, id: str):
+    def element_by_id(self, id: str) -> FirefoxWebElement:
         """Get an element on a webpage by its `id`."""
         return self.driver.find_element_by_id(id)
 
-    def element_by_text(self, text: str, tag: str = "*", exact: bool = True):
-        """Select an element on a webpage by its text contents."""
-        if exact:
-            xpath = f'//{tag}[text()="{text}"]'
+    def element_by_text(
+        self, text: str, element_type: str = "*", full_text: bool = True
+    ) -> FirefoxWebElement:
+        """Select an element on a webpage by its text contents.
+
+        Args:
+            text (str): The text contents of the desired element.
+            element_type (str, optional): The type of element to search for.
+              Example: div, span. Defaults to "*" (any element).
+            full_text (bool, optional): Specifies if `text` is full or
+              partial text contents of the element. Defaults to True
+              (full and exact match).
+        """
+        if full_text:
+            xpath = f'//{element_type}[text()="{text}"]'
         else:
-            xpath = f'//{tag}[contains(text(), "{text}")]'
+            xpath = f'//{element_type}[contains(text(), "{text}")]'
         return self.driver.find_element_by_xpath(xpath)
 
-    def click(self, element):
-        """
-        Simulate a click on an element.
+    def click(self, element: FirefoxWebElement) -> None:
+        """Simulate a click on an element.
 
         We are using this instead of `element.click()` because this works even if the element is obscured or blocked.
         """
@@ -83,13 +104,13 @@ class WebBrowser:
             "arguments[0].click();", element
         )  # Use JavaScript to click the element instead of a simulated mouse
 
-    def set_localstorage(self, key, value):
+    def set_localstorage(self, key: Hashable, value: Hashable) -> None:
         """Set a value in the browser's `localstorage`."""
         self.driver.execute_script(
             "window.localStorage.setItem(arguments[0], arguments[1]);", key, value
         )
 
-    def wait_until_window_close(self):
+    def wait_until_window_close(self) -> None:
         """Blocks until the browser window closes."""
         try:
             while True:
@@ -105,12 +126,17 @@ class BlackboardBrowser(WebBrowser):
     def __init__(
         self,
         base_url: str,
-        extra_prefs: PrefsType = {},
-        firefox_profile_path: Optional[Path] = None,
-        driver_path: str = None,
+        *args,
+        **kwargs,
     ) -> None:
+        """Run all of the steps necessary to log in to Blackboard Collaborate Ultra.
+
+        Args:
+            base_url (str): The base Blackboard URL, including the protocol.
+            *args, **kwargs: Extra arguments are passed to super().
+        """
         self.base_url = base_url
-        super().__init__(extra_prefs, firefox_profile_path, driver_path)
+        super().__init__(*args, **kwargs)
 
     def sign_in(self, username: str, password: str) -> None:
         """Sign in to the Blackboard Website."""
@@ -133,14 +159,13 @@ class BlackboardBrowser(WebBrowser):
         self.click(self.element_by_text(launch_button))
         sleep(1)
 
-        self.click(self.element_by_text("Join", exact=False))
+        self.click(self.element_by_text("Join", full_text=False))
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
 
     def configure_collaborate(self) -> None:
-        """
-        Configure Blackboard Collaborate Ultra.
+        """Configure Blackboard Collaborate Ultra.
 
-        This skips the tutorial and microphone check screens.
+        This is called to skip the tutorial and microphone check screens.
         """
         self.element_by_id("site-loading")
         # Skip the "Check your Microphone" screen
@@ -153,16 +178,31 @@ class BlackboardBrowser(WebBrowser):
     def run_all(
         cls,
         *,
-        base_url,
-        username,
-        password,
-        hide_ui=False,
-        raspberry_pi=False,
-        course_id,
-        launch_button,
-        driver_path,
-    ):
-        """Run all of the steps necessary to log in to Blackboard Collaborate Ultra."""
+        base_url: str,
+        username: str,
+        password: str,
+        hide_ui: bool = False,
+        raspberry_pi: bool = False,
+        course_id: str,
+        launch_button: str,
+        driver_path: str = "geckodriver",
+    ) -> None:
+        """Run all of the steps necessary to log in to Blackboard Collaborate Ultra.
+
+        Args:
+            base_url (str): The base Blackboard URL, including the protocol.
+            username (str):
+            password (str):
+            course_id (str): The Course’s ID. Found in the query string when
+              you open the URL in Blackboard.
+            launch_button (str): The text found in the button used to open the class.
+            driver_path (str, optional): The path to the `geckodriver` binary.
+              Defaults to "geckodriver".
+            hide_ui (bool, optional): Whether or not to hide the browser's UI.
+              Defaults to False.
+            raspberry_pi (bool, optional): Whether or not we are are running on a Pi.
+              Defaults to False.
+        """
         extra_prefs: PrefsType = {}
 
         if raspberry_pi:
@@ -178,6 +218,7 @@ class BlackboardBrowser(WebBrowser):
                 }
             )
 
+        firefox_profile_path: Optional[Path] = None
         if hide_ui:
             extra_prefs.update(
                 {
@@ -206,8 +247,6 @@ class BlackboardBrowser(WebBrowser):
                     }
                     """
                 )
-        else:
-            firefox_profile_path = None
 
         with cls(
             base_url,
@@ -226,7 +265,13 @@ class BooleanCoercingInterpolation(Interpolation):
 
     BOOLEANS = {"true": True, "false": False}
 
-    def before_get(self, parser, section, option, value, defaults):
+    def before_get(self, parser, section, option, value, defaults) -> Union[bool, str]:  # type: ignore
+        """Override the default ConfigParser behavior so that a proper Boolean
+        is returned when a value containing "True"/"False" is requested.
+
+        This is used instead of ConfigParser.getBoolean because using the Mapping
+        protocol is much more "Pythonic" than using a getter.
+        """
         try:
             return self.BOOLEANS[value.lower()]
         except KeyError:
@@ -256,11 +301,6 @@ if __name__ == "__main__":
     conf = ConfigParser(
         default_section="General",
         interpolation=BooleanCoercingInterpolation(),
-        defaults={
-            "raspberry_pi": "False",
-            "hide_ui": "False",
-            "driver_path": "geckodriver",
-        },
     )
     conf.read_file(arguments.config)
 
