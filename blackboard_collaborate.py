@@ -48,6 +48,7 @@ class WebBrowser:
             # Always open links and popups inline (in the same tab/window)
             "browser.link.open_newwindow": 1,
             "browser.link.open_newwindow.restriction": 0,
+            "media.autoplay.default": 0,  # Allow audio to play
         }
 
         for key, value in {**self.prefs, **extra_prefs}.items():
