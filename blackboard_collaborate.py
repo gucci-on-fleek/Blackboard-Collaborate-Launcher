@@ -203,12 +203,17 @@ class BlackboardBrowser(WebBrowser):
         self.localstorage["techcheck.status"] = "complete"
         # Skip the tutorial
         self.localstorage["ftue.announcement.introduction"] = True
+        self.localstorage["chat.defaultchannel"] = "everyone"
+        # Hide the annoying "X person joined/left" notifications
+        self.localstorage["profile.notification.roster.visual"] = False
 
         if profile_picture:
             mimetype = guess_mime_type(profile_picture)
             with open(profile_picture, "rb") as file:
                 profile_picture_uri = self.bytes_to_data_uri(file.read(), mimetype[0])
             self.localstorage["profile.avatar"] = profile_picture_uri
+
+        self.click(self.element_by_id("side-panel-open"))  # Open the chat by default
 
     @classmethod
     def run_all(
