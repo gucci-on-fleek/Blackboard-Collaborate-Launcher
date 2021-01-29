@@ -7,17 +7,21 @@
 
 import atexit
 from argparse import ArgumentParser, FileType
+from base64 import b64encode as base64_encode
 from configparser import ConfigParser, Interpolation
+from mimetypes import guess_type as guess_mime_type
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
-from typing import Dict, Optional, Union, Hashable
+from typing import Dict, Optional, Union
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.firefox.webelement import FirefoxWebElement
 
 PrefsType = Dict[str, Union[bool, int]]
+# JS has primitive types that match all of these, so it's trivial to translate them from Python to JS
+JavascriptTypes = Union[int, bool, str, float, dict, list]
 
 
 class WebBrowser:
@@ -113,14 +117,24 @@ class WebBrowser:
         def __init__(self, outer: "WebBrowser") -> None:
             self.outer = outer
 
-        def __setitem__(self, key: Hashable, value: Hashable) -> None:
+        def __setitem__(self, key: JavascriptTypes, value: JavascriptTypes) -> None:
             """Set a value in the browser's `localstorage`."""
             self.outer.driver.execute_script(
                 "window.localStorage.setItem(arguments[0], arguments[1]);", key, value
             )
 
-        def __getitem__(self, key: Hashable) -> None:
+        def __getitem__(self, key: JavascriptTypes) -> None:
             NotImplemented
+
+    @staticmethod
+    def bytes_to_data_uri(data: bytes, mimetype: Optional[str]) -> str:
+        """Convert a bytes object into a data URI that can be opened
+        in a web browser.
+        """
+        if not mimetype:
+            mimetype = "application/octet-stream"  # A somewhat reasonable fallback if we can't guess
+        encoded = base64_encode(data).strip(b"=").decode("ascii")
+        return f"data:{mimetype};base64,{encoded}"
 
     def wait_until_window_close(self) -> None:
         """Blocks until the browser window closes."""
@@ -174,10 +188,14 @@ class BlackboardBrowser(WebBrowser):
         self.click(self.element_by_text("Join", full_text=False))
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
 
-    def configure_collaborate(self) -> None:
+    def configure_collaborate(self, profile_picture: Optional[str] = None) -> None:
         """Configure Blackboard Collaborate Ultra.
 
         This is called to skip the tutorial and microphone check screens.
+
+        Args:
+            profile_picture (str, optional): The filesystem path to a profile picture.
+              Defaults to None.
         """
         self.element_by_id("site-loading")
         # Skip the "Check your Microphone" screen
@@ -185,6 +203,12 @@ class BlackboardBrowser(WebBrowser):
         self.localstorage["techcheck.status"] = "complete"
         # Skip the tutorial
         self.localstorage["ftue.announcement.introduction"] = True
+
+        if profile_picture:
+            mimetype = guess_mime_type(profile_picture)
+            with open(profile_picture, "rb") as file:
+                profile_picture_uri = self.bytes_to_data_uri(file.read(), mimetype[0])
+            self.localstorage["profile.avatar"] = profile_picture_uri
 
     @classmethod
     def run_all(
@@ -198,6 +222,7 @@ class BlackboardBrowser(WebBrowser):
         course_id: str,
         launch_button: str,
         driver_path: str = "geckodriver",
+        profile_picture: Optional[str] = None,
     ) -> None:
         """Run all of the steps necessary to log in to Blackboard Collaborate Ultra.
 
@@ -214,6 +239,8 @@ class BlackboardBrowser(WebBrowser):
               Defaults to False.
             raspberry_pi (bool, optional): Whether or not we are are running on a Pi.
               Defaults to False.
+            profile_picture (str, optional): The filesystem path to a profile picture.
+              Defaults to None.
         """
         extra_prefs: PrefsType = {}
 
@@ -268,7 +295,7 @@ class BlackboardBrowser(WebBrowser):
         ) as browser:
             browser.sign_in(username, password)
             browser.launch_collaborate(course_id, launch_button)
-            browser.configure_collaborate()
+            browser.configure_collaborate(profile_picture)
             browser.wait_until_window_close()
 
 

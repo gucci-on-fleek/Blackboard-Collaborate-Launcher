@@ -1,5 +1,5 @@
 *Blackboard Collaborate Ultra* Launcher
-====================================
+======================================
 
 <!-- Blackboard Collaborate Ultra Launcher
      https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher
@@ -45,36 +45,40 @@ See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for full d
 
 ### Config File
 ```ini
-[General]                               # Place global settings in the [General] Section
+[General]                                 # Place global settings in the [General]
+                                          # Section. They will be applied to all classes.
 
-base_url      = https://bb.example.edu  # The base Blackboard URL. (Required) 
-                                        # You must include “https://” or “http://”
+base_url        = https://bb.example.edu  # The base Blackboard URL. (Required) 
+                                          # You must include “https://” or “http://”
 
-username      = john.smith              # Your Blackboard Username. (Required)
+username        = john.smith              # Your Blackboard Username. (Required)
 
-password      = SuperSecretPassword     # Your Blackboard Password. (Required)
+password        = SuperSecretPassword     # Your Blackboard Password. (Required)
 
-hide_ui       = False                   # Hide the UI of the browser so that only 
-                                        # Blackboard Collaborate is visible. (Optional)
+hide_ui         = False                   # Hide the UI of the browser so that only 
+                                          # Blackboard Collaborate is visible. (Optional)
 
-raspberry_pi  = False                   # Enable hardware acceleration of videos on
-                                        # the Raspberry Pi. (Optional)
+raspberry_pi    = False                   # Enable hardware acceleration of videos on
+                                          # the Raspberry Pi. (Optional)
 
-driver_path   = C:\geckodriver.exe      # The path to geckodriver. (Optional)
+profile_picture = C:\image.png            # A path to the profile picture to use in
+                                          # Blackboard Collaborate. (Optional)
 
-[ClassOne]                              # The class name. You can have as many classes 
-                                        # as you want; just give each its own [section]. 
+driver_path     = C:\geckodriver.exe      # The path to geckodriver. (Optional)
 
-course_id     = _12345_6                # The Course’s ID. Found in the query string
-                                        # when you open the URL in Blackboard. (Required)
+[ClassOne]                                # The class name. You can have unlimited  
+                                          # classes; just give each its own [section]. 
+
+course_id       = _12345_6                # The Course’s ID. Found in the query string
+                                          # in the Blackboard URL. (Required)
                                         
-launch_button = Math 101 - Course Room  # The text found in the button used to
-                                        # open the class. (Required)
+launch_button   = Math 101 - Course Room  # The text found in the button used to
+                                          # open the class. (Required)
 
-[Biology]                               # Launch this with
-                                        # “blackboard_collaborate.py Biology”.
+[Biology]                                 # Launch this with
+                                          # “blackboard_collaborate.py Biology”.
 
-cOuRsE_iD     = _98765_4                # All keys are case-insensitive.
-launch_button = Biology 300 - Lecture
-hide_ui       = True                    # You can override any setting from [General].
+cOuRsE_iD       = _98765_4                # All keys are case-insensitive.
+launch_button   = Biology 300 - Lecture
+hide_ui         = True                    # You can override any setting from [General].
 ```
