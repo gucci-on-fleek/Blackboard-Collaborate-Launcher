@@ -6,6 +6,7 @@
 # SPDX-FileCopyrightText: 2021 gucci-on-fleek
 
 import atexit
+import encodings.idna  # Required for embedded zip file
 from argparse import ArgumentParser, FileType
 from base64 import b64encode as base64_encode
 from configparser import ConfigParser, Interpolation
