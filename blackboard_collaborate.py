@@ -1,4 +1,4 @@
-#! /usr/bin/python3.8
+#! /usr/bin/python3
 
 # Blackboard Collaborate Ultra Launcher
 # https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher
