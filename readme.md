@@ -9,7 +9,8 @@
 
 A simple script to automatically launch a *Blackboard Collaborate Ultra* session. Zero clicks and zero interaction required.
 
-<video src="https://user-images.githubusercontent.com/49086429/115156872-b1224c00-a043-11eb-9f13-cd8f127dfe02.mp4" title="Video demonstration of the script present in this repository."></video> <!-- Licence for Example_1.mp4: MPL-2.0+ OR CC-BY-SA-4.0+ -->
+<details><summary>View Demo Video</summary>
+<video src="https://user-images.githubusercontent.com/49086429/115156872-b1224c00-a043-11eb-9f13-cd8f127dfe02.mp4" title="Video demonstration of the script present in this repository."></video> <!-- Licence for Example_1.mp4: MPL-2.0+ OR CC-BY-SA-4.0+ --></details>
 
 Motivation
 ----------
