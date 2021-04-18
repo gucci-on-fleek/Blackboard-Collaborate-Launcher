@@ -7,12 +7,14 @@
      SPDX-FileCopyrightText: 2021 gucci-on-fleek
 -->
 
-A simple script to automatically launch a *Blackboard Collaborate Ultra* session.
+A simple script to automatically launch a *Blackboard Collaborate Ultra* session. Zero clicks and zero interaction required.
+
+<video src="https://user-images.githubusercontent.com/49086429/115156872-b1224c00-a043-11eb-9f13-cd8f127dfe02.mp4" title="Video demonstration of the script present in this repository."></video> <!-- Licence for Example_1.mp4: MPL-2.0+ OR CC-BY-SA-4.0+ -->
 
 Motivation
 ----------
 
-Launching *Blackboard Collaborate Ultra* takes nearly 10 clicks: 3 to login, 1 to open the class, 3 to launch *Collaborate*, and then 2 to close the annoying “Check Your Microphone/Webcam” screens. This tool reduces that to 0 clicks, and can be automatically launched at class time via `cron` or the “Task Scheduler.”
+Launching *Blackboard Collaborate Ultra* takes nearly 10 clicks: 3 to login, 1 to open the class, 3 to launch *Collaborate*, and then 2 to close the annoying “Check Your Microphone/Webcam” screens. This tool reduces that to **0 clicks** and requires **zero interaction**, so it can be automatically launched at class time via `cron` or the “Task Scheduler.”
 
 Installation
 ------------
@@ -23,6 +25,9 @@ You will require [`python3`](https://www.python.org/downloads/) (≥ 3.8), [Fi
 2. Place `geckodriver` somewhere in your `PATH`, or add its location to the config file.
 3. Run: `pip3 install -r requirements.txt`
 4. That’s it!
+
+### Note
+I have used this script for an entire semester with zero issues; however, it is heavily reliant on the exact structure of the _Blackboard_ website, which may change at any time. Nevertheless, I can confirm that this script is fully functional as of April 2021. If anything changes to make this script stop working, feel free to raise an issue or submit a PR.
 
 Usage
 -----
@@ -82,3 +87,8 @@ cOuRsE_iD       = _98765_4                # All keys are case-insensitive.
 launch_button   = Biology 300 - Lecture
 hide_ui         = True                    # You can override any setting from [General].
 ```
+
+Licence
+-------
+
+Unless otherwise stated, all files are licensed under the [Mozilla Public Licence](licence.txt), version&nbsp;2.0 or later.
