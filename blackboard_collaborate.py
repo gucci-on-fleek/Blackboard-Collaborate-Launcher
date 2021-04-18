@@ -108,9 +108,9 @@ class WebBrowser:
 
         We are using this instead of `element.click()` because this works even if the element is obscured or blocked.
         """
-        self.driver.execute_script(
+        self.driver.execute_script(  # Use JavaScript to click the element instead of a simulated mouse
             "arguments[0].click();", element
-        )  # Use JavaScript to click the element instead of a simulated mouse
+        )
 
     class _LocalStorage:
         """A class to allow `localstorage` to be accessed as a Mapping"""
@@ -147,8 +147,8 @@ class WebBrowser:
             return
 
 
-class BlackboardBrowser(WebBrowser):
-    """Accesses the Blackboard (Classic) Website."""
+class BlackboardCollaborate(WebBrowser):
+    """Accesses Blackboard Collaborate Ultra."""
 
     def __init__(
         self,
@@ -184,7 +184,7 @@ class BlackboardBrowser(WebBrowser):
 
         self.driver.switch_to.frame(self.element_by_id("collabUltraLtiFrame"))
         self.click(self.element_by_text(launch_button))
-        sleep(1)
+        sleep(1)  # Wait after clicking to let the page's JavaScript run
 
         self.click(self.element_by_text("Join", full_text=False))
         self.driver.switch_to.default_content()  # Switch out of the `iframe`
@@ -318,14 +318,14 @@ class BooleanCoercingInterpolation(Interpolation):
         protocol is much more "Pythonic" than using a getter.
         """
         try:
-            return self.BOOLEANS[value.lower()]
+            return self.BOOLEANS[value.casefold()]
         except KeyError:
             return value
 
 
 if __name__ == "__main__":
     argparser = ArgumentParser(
-        description=f"A simple script to automatically launch a Blackboard Collaborate Ultra session.",
+        description="A simple script to automatically launch a Blackboard Collaborate Ultra session.",
         epilog="See https://github.com/gucci-on-fleek/Blackboard-Collaborate-Launcher for full documentation.",
     )
 
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     conf.read_file(arguments.config)
 
     try:
-        BlackboardBrowser.run_all(**conf[arguments.class_name])
+        BlackboardCollaborate.run_all(**conf[arguments.class_name])
     except TypeError:
         print(
             f"You appear to be missing some REQUIRED configuration keys. Please edit {arguments.config.name} and try again. \n"
