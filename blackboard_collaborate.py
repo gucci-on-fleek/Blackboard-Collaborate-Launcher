@@ -62,8 +62,8 @@ class WebBrowser:
         self.driver = webdriver.Firefox(
             options=self.options, executable_path=driver_path
         )
-        # Search for each element for at least 30 seconds before giving up
-        self.driver.implicitly_wait(30)
+        # Search for each element for at most 45 seconds before giving up
+        self.driver.implicitly_wait(45)
         self.driver.maximize_window()
         atexit.register(self.__exit__)
 
