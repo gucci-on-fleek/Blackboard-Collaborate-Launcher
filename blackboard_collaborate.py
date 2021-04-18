@@ -338,7 +338,7 @@ if __name__ == "__main__":
         "--config",
         type=FileType("rt"),
         help="The configuration file to use. Defaults to “./blackboard_collaborate.ini”.",
-        default=Path("./blackboard_collaborate.ini"),
+        default=Path("./blackboard_collaborate.ini").open("rt"),
     )
 
     arguments = argparser.parse_args()
